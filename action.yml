@@ -23,6 +23,10 @@ inputs:
     description: 'Clanopy CLI version to install (e.g. "v0.3.0", "canary"). Defaults to latest release.'
     required: false
     default: 'latest'
+  reply_only:
+    description: 'Evaluate thread replies only, skip new findings'
+    required: false
+    default: 'false'
 
 runs:
   using: 'composite'
@@ -85,7 +89,12 @@ runs:
         if [ "${{ inputs.post_comment }}" = "true" ]; then
           POST_FLAG="--post"
         fi
+        REPLY_ONLY_FLAG=""
+        if [ "${{ inputs.reply_only }}" = "true" ]; then
+          REPLY_ONLY_FLAG="--reply-only"
+        fi
         clanopy review "$PR_NUMBER" \
           --repo "$REPO" \
           --config "${{ inputs.config_path }}" \
-          $POST_FLAG
+          $POST_FLAG \
+          $REPLY_ONLY_FLAG
