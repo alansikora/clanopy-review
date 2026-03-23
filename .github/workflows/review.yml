@@ -1,0 +1,62 @@
+name: Clanopy Review
+
+on:
+  workflow_call:
+    inputs:
+      config_path:
+        description: 'Path to .clanopy/review.yml'
+        type: string
+        default: '.clanopy/review.yml'
+      clanopy_version:
+        description: 'Clanopy CLI version to install (e.g. "v0.3.0", "canary"). Defaults to latest release.'
+        type: string
+        default: 'latest'
+    secrets:
+      claude_code_oauth_token:
+        description: 'Claude access token (from /install-github-app)'
+        required: false
+      anthropic_api_key:
+        description: 'Anthropic API key (alternative to access token)'
+        required: false
+
+jobs:
+  filter:
+    # Run on PR events, or on review comments that are replies and not from the bot.
+    if: >-
+      !github.event.comment || (
+        github.event.comment.user.login != 'clanopy-review[bot]' &&
+        github.event.comment.in_reply_to_id
+      )
+    runs-on: ubuntu-latest
+    outputs:
+      should_review: ${{ !github.event.comment || steps.check.outputs.is_clanopy_thread == 'true' }}
+    steps:
+      - name: Check if clanopy thread
+        id: check
+        if: github.event.comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BODY=$(gh api repos/${{ github.repository }}/pulls/comments/${{ github.event.comment.in_reply_to_id }} --jq '.body')
+          if echo "$BODY" | grep -q "clanopy fix"; then
+            echo "is_clanopy_thread=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_clanopy_thread=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  review:
+    needs: filter
+    if: needs.filter.outputs.should_review == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: alansikora/clanopy-review@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.claude_code_oauth_token }}
+          anthropic_api_key: ${{ secrets.anthropic_api_key }}
+          config_path: ${{ inputs.config_path }}
+          clanopy_version: ${{ inputs.clanopy_version }}
+          reply_only: ${{ github.event.comment != '' }}
