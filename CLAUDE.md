@@ -5,13 +5,16 @@ GitHub Action for clanopy PR reviews. This is a thin wrapper — all review logi
 ## Project structure
 
 ```
-action.yml    # Composite GitHub Action definition
-README.md     # Usage docs
+action.yml                          # Composite GitHub Action definition
+.github/workflows/review.yml       # Reusable workflow for consumer repos
+.github/workflows/release-tag.yml  # Auto-updates v1 tag on push to main
+README.md                           # Usage docs
 ```
 
 ## Architecture
 
 - **Composite action** — shell steps only, no JavaScript/Docker
+- **Reusable workflow** — consumers call this via `workflow_call` instead of inlining filter/review logic
 - Downloads the clanopy CLI binary via `install.sh` from the main clanopy repo
 - Installs Claude Code via npm
 - Generates a GitHub App installation token via OIDC exchange with `token.clanopy.workers.dev`

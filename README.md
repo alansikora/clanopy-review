@@ -21,8 +21,10 @@ This installs the required GitHub App, configures authentication, and creates a 
 # .github/workflows/clanopy-review.yml
 name: Clanopy Review
 on:
-  pull_request:
-    types: [opened, synchronize]
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+  pull_request_review_comment:
+    types: [created]
 
 permissions:
   contents: read
@@ -30,16 +32,15 @@ permissions:
   pull-requests: write
 
 jobs:
-  review:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: alansikora/clanopy-review@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+  pr:
+    uses: alansikora/clanopy-review/.github/workflows/review.yml@v1
+    with:
+      config_path: .clanopy/review.yml
+    secrets:
+      claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 ```
 
-The `id-token: write` permission is required for OIDC-based token generation with the Clanopy Review app.
+The `id-token: write` permission is required for OIDC-based token generation with the Clanopy Review app. `pull_request_target` is used instead of `pull_request` to support fork PRs.
 
 ## Inputs
 
@@ -50,6 +51,7 @@ The `id-token: write` permission is required for OIDC-based token generation wit
 | `config_path` | Path to review config | `.clanopy/review.yml` |
 | `post_comment` | Post findings as PR comment | `true` |
 | `clanopy_version` | CLI version to install (`v0.3.0`, `canary`, etc.) | `latest` |
+| `reply_only` | Evaluate thread replies only, skip new findings | `false` |
 
 ## How it works
 
